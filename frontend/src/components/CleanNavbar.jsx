@@ -173,7 +173,7 @@ const CleanNavbar = () => {
                 e.target.style.backgroundColor = '#0891b2';
               }}
             >
-              Sign Up
+              Sign UP
             </button>
             <Link
               to="/dashboard"

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { FaTimes, FaUser, FaLock, FaEye, FaEyeSlash, FaEnvelope, FaPhone, FaMapMarkerAlt, FaIdCard, FaUsers } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
-const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
+const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   // Reset form mode when initialMode changes
   React.useEffect(() => {
@@ -32,22 +36,113 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      console.log('Login attempt:', { email: formData.email, password: formData.password });
-      alert('Login functionality would be implemented here');
-    } else {
-      console.log('Registration attempt:', formData);
-      alert('Registration functionality would be implemented here');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      if (isLogin) {
+        // Login API call
+        const response = await fetch('http://localhost:5000/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Store token and user data
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // Notify parent component
+          if (onLoginSuccess) {
+            onLoginSuccess(data.user, data.token);
+          }
+          
+          // Redirect to dashboard
+          navigate('/dashboard');
+          onClose();
+        } else {
+          setError(data.message || 'Login failed');
+        }
+      } else {
+        // Registration API call
+        const response = await fetch('http://localhost:5000/api/users/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
+            fullName: formData.fullName,
+            phoneNumber: formData.phoneNumber,
+            location: formData.location,
+            community: formData.community,
+            role: formData.role,
+            organization: formData.organization,
+            nationalId: formData.nationalId,
+            emergencyContact: formData.emergencyContact,
+            emergencyPhone: formData.emergencyPhone
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Store token and user data
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // Notify parent component
+          if (onLoginSuccess) {
+            onLoginSuccess(data.user, data.token);
+          }
+          
+          // Switch to login mode instead of closing
+          setIsLogin(true);
+          setFormData({
+            email: formData.email, // Keep the email for login
+            password: '',
+            confirmPassword: '',
+            fullName: '',
+            phoneNumber: '',
+            location: '',
+            community: '',
+            role: '',
+            organization: '',
+            nationalId: '',
+            emergencyContact: '',
+            emergencyPhone: ''
+          });
+        } else {
+          setError(data.message || 'Registration failed');
+        }
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('API Error:', err);
+    } finally {
+      setIsLoading(false);
     }
-    onClose();
   };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
+    setError('');
     setFormData({
       // Login fields
       email: '',
@@ -132,6 +227,22 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#dc2626',
+            padding: '12px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit}>
           {/* Registration Fields */}
@@ -158,9 +269,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="Enter your full name"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -182,9 +301,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="Enter your national ID"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -208,9 +335,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="+254 700 123456"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -230,9 +365,18 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         value={formData.role}
                         onChange={handleInputChange}
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white',
+                          appearance: 'none'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -272,9 +416,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="e.g., Garissa Town, Dadaab, Hulugho"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -296,9 +448,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="e.g., Iftin, Sankuri, Township"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -326,9 +486,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                       value={formData.organization}
                       onChange={handleInputChange}
                       placeholder="e.g., Ministry of Water, UNICEF, Local NGO"
+                      disabled={isLoading}
                       style={{
-                        width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                        fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                        width: '100%', 
+                        padding: '12px 45px', 
+                        border: '2px solid #e5e7eb', 
+                        borderRadius: '10px',
+                        fontSize: '16px', 
+                        outline: 'none', 
+                        transition: 'border-color 0.3s ease', 
+                        boxSizing: 'border-box',
+                        backgroundColor: isLoading ? '#f9fafb' : 'white'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                       onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -358,9 +526,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="Emergency contact full name"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -382,9 +558,17 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                         onChange={handleInputChange}
                         placeholder="+254 700 123456"
                         required
+                        disabled={isLoading}
                         style={{
-                          width: '100%', padding: '12px 45px', border: '2px solid #e5e7eb', borderRadius: '10px',
-                          fontSize: '16px', outline: 'none', transition: 'border-color 0.3s ease', boxSizing: 'border-box'
+                          width: '100%', 
+                          padding: '12px 45px', 
+                          border: '2px solid #e5e7eb', 
+                          borderRadius: '10px',
+                          fontSize: '16px', 
+                          outline: 'none', 
+                          transition: 'border-color 0.3s ease', 
+                          boxSizing: 'border-box',
+                          backgroundColor: isLoading ? '#f9fafb' : 'white'
                         }}
                         onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                         onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -422,6 +606,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                 onChange={handleInputChange}
                 placeholder="Enter your email"
                 required
+                disabled={isLoading}
                 style={{
                   width: '100%',
                   padding: '12px 45px',
@@ -430,7 +615,8 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                   fontSize: '16px',
                   outline: 'none',
                   transition: 'border-color 0.3s ease',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  backgroundColor: isLoading ? '#f9fafb' : 'white'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -464,6 +650,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                 onChange={handleInputChange}
                 placeholder="Enter your password"
                 required
+                disabled={isLoading}
                 style={{
                   width: '100%',
                   padding: '12px 45px 12px 45px',
@@ -472,7 +659,8 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                   fontSize: '16px',
                   outline: 'none',
                   transition: 'border-color 0.3s ease',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  backgroundColor: isLoading ? '#f9fafb' : 'white'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -480,6 +668,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
                 style={{
                   position: 'absolute',
                   right: '15px',
@@ -488,7 +677,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                   background: 'none',
                   border: 'none',
                   color: '#9ca3af',
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   padding: '5px'
                 }}
               >
@@ -524,6 +713,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                   onChange={handleInputChange}
                   placeholder="Confirm your password"
                   required={!isLogin}
+                  disabled={isLoading}
                   style={{
                     width: '100%',
                     padding: '12px 45px',
@@ -532,7 +722,8 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
                     fontSize: '16px',
                     outline: 'none',
                     transition: 'border-color 0.3s ease',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    backgroundColor: isLoading ? '#f9fafb' : 'white'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#0891b2'}
                   onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -563,23 +754,28 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
           {/* Submit Button */}
           <button
             type="submit"
+            disabled={isLoading}
             style={{
               width: '100%',
-              backgroundColor: '#0891b2',
+              backgroundColor: isLoading ? '#9ca3af' : '#0891b2',
               color: 'white',
               padding: '14px',
               border: 'none',
               borderRadius: '10px',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               transition: 'background-color 0.3s ease',
               marginBottom: '20px'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#0e7490'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#0891b2'}
+            onMouseOver={(e) => {
+              if (!isLoading) e.target.style.backgroundColor = '#0e7490';
+            }}
+            onMouseOut={(e) => {
+              if (!isLoading) e.target.style.backgroundColor = '#0891b2';
+            }}
           >
-            {isLogin ? 'Sign In' : 'Create Account'}
+            {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
 
           {/* Toggle Mode */}
@@ -589,13 +785,14 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login' }) => {
               <button
                 type="button"
                 onClick={toggleMode}
+                disabled={isLoading}
                 style={{
                   background: 'none',
                   border: 'none',
                   color: '#0891b2',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   textDecoration: 'underline'
                 }}
               >

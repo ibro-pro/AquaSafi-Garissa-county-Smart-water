@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminNavbar from './AdminNavbar';
 import AdminAnalytics from './AdminAnalytics';
@@ -45,148 +45,277 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
-
-  // Enhanced Admin Dashboard Data
-  const [adminData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [adminData, setAdminData] = useState({
     systemStats: {
-      totalWaterPoints: 412,
-      activePoints: 387,
-      maintenancePoints: 18,
-      offlinePoints: 7,
-      totalUsers: 15429,
-      activeUsers: 12384,
-      administrativeStaff: 45,
-      fieldTechnicians: 78,
-      monthlyRevenue: 4567890,
-      operationalCosts: 2890340,
-      systemEfficiency: 96.8,
-      customerSatisfaction: 94.2,
-      alertsToday: 23,
-      reportsProcessed: 156,
-      maintenanceCompleted: 12,
-      newRegistrations: 89
+      totalWaterPoints: 0,
+      activePoints: 0,
+      maintenancePoints: 0,
+      offlinePoints: 0,
+      totalUsers: 0,
+      activeUsers: 0,
+      administrativeStaff: 0,
+      fieldTechnicians: 0,
+      monthlyRevenue: 0,
+      operationalCosts: 0,
+      systemEfficiency: 0,
+      customerSatisfaction: 0,
+      alertsToday: 0,
+      reportsProcessed: 0,
+      maintenanceCompleted: 0,
+      newRegistrations: 0
     },
-    regionalData: [
-      {
-        id: 1,
-        region: 'Garissa Town',
-        waterPoints: 89,
-        population: 5247,
-        coverage: 94.2,
-        qualityScore: 92.8,
-        revenue: 1234567,
-        status: 'excellent'
-      },
-      {
-        id: 2,
-        region: 'Dadaab Complex',
-        waterPoints: 156,
-        population: 8956,
-        coverage: 87.5,
-        qualityScore: 89.1,
-        revenue: 2134890,
-        status: 'good'
-      },
-      {
-        id: 3,
-        region: 'Ijara District',
-        waterPoints: 67,
-        population: 3456,
-        coverage: 91.3,
-        qualityScore: 88.7,
-        revenue: 987456,
-        status: 'good'
-      },
-      {
-        id: 4,
-        region: 'Lagdera',
-        waterPoints: 45,
-        population: 2187,
-        coverage: 78.9,
-        qualityScore: 82.4,
-        revenue: 567234,
-        status: 'needs-attention'
-      },
-      {
-        id: 5,
-        region: 'Balambala',
-        waterPoints: 55,
-        population: 2983,
-        coverage: 85.6,
-        qualityScore: 86.2,
-        revenue: 743289,
-        status: 'good'
-      }
-    ],
-    recentActivities: [
-      {
-        id: 1,
-        type: 'maintenance',
-        title: 'Pump Replacement Completed',
-        location: 'Garissa Main Borehole',
-        user: 'Ahmed Hassan',
-        timestamp: '15 mins ago',
-        priority: 'high',
-        status: 'completed'
-      },
-      {
-        id: 2,
-        type: 'alert',
-        title: 'Water Quality Alert',
-        location: 'Dadaab Camp Section C',
-        user: 'System Monitor',
-        timestamp: '32 mins ago',
-        priority: 'critical',
-        status: 'investigating'
-      },
-      {
-        id: 3,
-        type: 'user',
-        title: 'New User Registration',
-        location: 'Iftin Village',
-        user: 'Fatima Mohammed',
-        timestamp: '1 hour ago',
-        priority: 'low',
-        status: 'approved'
-      },
-      {
-        id: 4,
-        type: 'financial',
-        title: 'Payment Processed',
-        location: 'Sankuri Community',
-        user: 'Payment Gateway',
-        timestamp: '2 hours ago',
-        priority: 'medium',
-        status: 'completed'
-      }
-    ],
-    systemAlerts: [
-      {
-        id: 1,
-        type: 'critical',
-        title: 'Server Load High - Immediate Action Required',
-        description: 'Database server experiencing high load. Consider scaling.',
-        timestamp: '5 mins ago',
-        acknowledged: false
-      },
-      {
-        id: 2,
-        type: 'warning',
-        title: 'Scheduled Maintenance Reminder',
-        description: 'Lagdera water treatment plant maintenance due tomorrow.',
-        timestamp: '1 hour ago',
-        acknowledged: true
-      },
-      {
-        id: 3,
-        type: 'info',
-        title: 'System Update Available',
-        description: 'AquaSafi v2.1.4 with security patches available.',
-        timestamp: '3 hours ago',
-        acknowledged: false
-      }
-    ]
+    regionalData: [],
+    recentActivities: [],
+    systemAlerts: []
   });
+
+  // API Base URL
+  const API_BASE = 'http://localhost:5000/api/admin';
+
+  // Fetch data based on active tab
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        
+        switch (activeTab) {
+          case 'overview':
+            await fetchOverviewData(token);
+            break;
+          case 'water-infrastructure':
+            await fetchWaterInfrastructure(token);
+            break;
+          case 'real-time-monitoring':
+            await fetchRealTimeMonitoring(token);
+            break;
+          case 'user-management':
+            await fetchUserManagement(token);
+            break;
+          case 'financial-management':
+            await fetchFinancialManagement(token);
+            break;
+          default:
+            break;
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (activeTab === 'overview') {
+      fetchData();
+    }
+  }, [activeTab]);
+
+  // API Functions
+  const fetchOverviewData = async (token) => {
+    try {
+      const [overviewRes, regionalRes, activitiesRes, alertsRes] = await Promise.all([
+        fetch(`${API_BASE}/dashboard/overview`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE}/dashboard/regional-data`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE}/dashboard/recent-activities`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE}/dashboard/system-alerts`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      if (overviewRes.ok && regionalRes.ok && activitiesRes.ok && alertsRes.ok) {
+        const [overviewData, regionalData, activitiesData, alertsData] = await Promise.all([
+          overviewRes.json(),
+          regionalRes.json(),
+          activitiesRes.json(),
+          alertsRes.json()
+        ]);
+
+        setAdminData(prev => ({
+          ...prev,
+          systemStats: overviewData.systemStats,
+          regionalData: regionalData,
+          recentActivities: activitiesData,
+          systemAlerts: alertsData
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching overview data:', error);
+    }
+  };
+
+  const fetchWaterInfrastructure = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE}/water-infrastructure`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Handle water infrastructure data
+        console.log('Water infrastructure:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching water infrastructure:', error);
+    }
+  };
+
+  const fetchRealTimeMonitoring = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE}/real-time-monitoring`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Handle real-time monitoring data
+        console.log('Real-time monitoring:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching real-time monitoring:', error);
+    }
+  };
+
+  const fetchUserManagement = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE}/user-management`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Handle user management data
+        console.log('User management:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching user management:', error);
+    }
+  };
+
+  const fetchFinancialManagement = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE}/financial/overview`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Handle financial data
+        console.log('Financial overview:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching financial data:', error);
+    }
+  };
+
+  // API Functions for Actions
+  const generateReport = async (reportType, periodStart, periodEnd) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/reports/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type: reportType,
+          period_start: periodStart,
+          period_end: periodEnd
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Report generation started!');
+        return data;
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+    }
+  };
+
+  const updateSystemSettings = async (settings) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/system/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(settings)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Settings updated successfully!');
+        return data;
+      }
+    } catch (error) {
+      console.error('Error updating settings:', error);
+    }
+  };
+
+  const updateUserStatus = async (userId, updates) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/user-management/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('User updated successfully!');
+        return data;
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+    }
+  };
+
+  const getSystemSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/system/settings`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching system settings:', error);
+    }
+  };
+
+  const getWaterPointDetail = async (pointId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/water-infrastructure/${pointId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching water point detail:', error);
+    }
+  };
 
   // Enhanced Sidebar Menu Items for Admin
   const adminMenuItems = [
@@ -201,7 +330,7 @@ const AdminDashboard = () => {
       id: 'water-infrastructure', 
       label: 'Water Infrastructure', 
       icon: FaWater, 
-      badge: '412',
+      badge: adminData.systemStats.totalWaterPoints?.toString() || '412',
       category: 'main'
     },
     { 
@@ -215,14 +344,14 @@ const AdminDashboard = () => {
       id: 'user-management', 
       label: 'User Management', 
       icon: FaUsersCog, 
-      badge: '15.4K',
+      badge: adminData.systemStats.totalUsers ? `${(adminData.systemStats.totalUsers / 1000).toFixed(1)}K` : '15.4K',
       category: 'management'
     },
     { 
       id: 'staff-management', 
       label: 'Staff Management', 
       icon: FaUsers, 
-      badge: '123',
+      badge: (adminData.systemStats.administrativeStaff + adminData.systemStats.fieldTechnicians)?.toString() || '123',
       category: 'management'
     },
     { 
@@ -243,7 +372,7 @@ const AdminDashboard = () => {
       id: 'maintenance-operations', 
       label: 'Maintenance Operations', 
       icon: FaTools, 
-      badge: '23',
+      badge: adminData.systemStats.maintenancePoints?.toString() || '23',
       category: 'operations'
     },
     { 
@@ -264,7 +393,7 @@ const AdminDashboard = () => {
       id: 'emergency-response', 
       label: 'Emergency Response', 
       icon: FaExclamationTriangle, 
-      badge: '3',
+      badge: adminData.systemStats.alertsToday?.toString() || '3',
       category: 'emergency'
     },
     { 
@@ -300,343 +429,353 @@ const AdminDashboard = () => {
   // System Overview Component
   const SystemOverview = () => (
     <div className="space-y-8">
-      {/* Top KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">Total Water Points</p>
-              <p className="text-4xl font-bold">{adminData.systemStats.totalWaterPoints}</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="text-green-300 mr-1" />
-                <span className="text-green-300 text-sm">+8.2% this month</span>
-              </div>
-            </div>
-            <div className="p-4 bg-white bg-opacity-20 rounded-full">
-              <FaWater className="text-3xl" />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-emerald-100 text-sm font-medium">Active Users</p>
-              <p className="text-4xl font-bold">{(adminData.systemStats.activeUsers / 1000).toFixed(1)}K</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="text-green-300 mr-1" />
-                <span className="text-green-300 text-sm">+12.4% this month</span>
-              </div>
-            </div>
-            <div className="p-4 bg-white bg-opacity-20 rounded-full">
-              <FaUsers className="text-3xl" />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm font-medium">Monthly Revenue</p>
-              <p className="text-4xl font-bold">₦{(adminData.systemStats.monthlyRevenue / 1000000).toFixed(1)}M</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="text-green-300 mr-1" />
-                <span className="text-green-300 text-sm">+15.7% this month</span>
-              </div>
-            </div>
-            <div className="p-4 bg-white bg-opacity-20 rounded-full">
-              <FaMoneyBillWave className="text-3xl" />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">System Efficiency</p>
-              <p className="text-4xl font-bold">{adminData.systemStats.systemEfficiency}%</p>
-              <div className="flex items-center mt-2">
-                <FaArrowUp className="text-green-300 mr-1" />
-                <span className="text-green-300 text-sm">+2.1% this month</span>
-              </div>
-            </div>
-            <div className="p-4 bg-white bg-opacity-20 rounded-full">
-              <FaRocket className="text-3xl" />
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Secondary Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-cyan-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.activePoints}</p>
-            <p className="text-sm text-gray-600">Active Points</p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div className="bg-cyan-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.activePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
-            </div>
-          </div>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-yellow-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.maintenancePoints}</p>
-            <p className="text-sm text-gray-600">Maintenance</p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div className="bg-yellow-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.maintenancePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-red-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.offlinePoints}</p>
-            <p className="text-sm text-gray-600">Offline</p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div className="bg-red-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.offlinePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.alertsToday}</p>
-            <p className="text-sm text-gray-600">Today's Alerts</p>
-            <div className="flex justify-center mt-2">
-              <FaBell className="text-green-500" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.newRegistrations}</p>
-            <p className="text-sm text-gray-600">New Users</p>
-            <div className="flex justify-center mt-2">
-              <FaUserCircle className="text-purple-500" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-indigo-500">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.customerSatisfaction}%</p>
-            <p className="text-sm text-gray-600">Satisfaction</p>
-            <div className="flex justify-center mt-2">
-              <FaThumbsUp className="text-indigo-500" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Regional Performance and Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Regional Performance */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center">
-              <FaGlobe className="mr-3 text-blue-600" />
-              Regional Performance
-            </h3>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-              View Details
-            </button>
-          </div>
-          <div className="space-y-4">
-            {adminData.regionalData.map((region, index) => (
-              <motion.div
-                key={region.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-800">{region.region}</h4>
-                  <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                    <div>
-                      <p className="text-gray-600">Points: <span className="font-medium">{region.waterPoints}</span></p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Coverage: <span className="font-medium">{region.coverage}%</span></p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Quality: <span className="font-medium">{region.qualityScore}</span></p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    region.status === 'excellent' ? 'bg-green-100 text-green-800' :
-                    region.status === 'good' ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {region.status}
-                  </div>
-                  <button className="p-2 text-gray-400 hover:text-gray-600">
-                    <FaEye />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Recent Activities */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-white rounded-2xl shadow-xl p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center">
-              <FaHistory className="mr-3 text-green-600" />
-              Recent Activities
-            </h3>
-            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-              View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            {adminData.recentActivities.map((activity, index) => (
-              <motion.div
-                key={activity.id}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className={`p-2 rounded-full ${
-                  activity.type === 'maintenance' ? 'bg-yellow-100 text-yellow-600' :
-                  activity.type === 'alert' ? 'bg-red-100 text-red-600' :
-                  activity.type === 'user' ? 'bg-blue-100 text-blue-600' :
-                  'bg-green-100 text-green-600'
-                }`}>
-                  {activity.type === 'maintenance' ? <FaTools /> :
-                   activity.type === 'alert' ? <FaExclamationTriangle /> :
-                   activity.type === 'user' ? <FaUserCircle /> :
-                   <FaMoneyBillWave />}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-800">{activity.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{activity.location} • {activity.user}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-gray-500">{activity.timestamp}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      activity.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      activity.status === 'investigating' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {activity.status}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* System Alerts */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="bg-white rounded-2xl shadow-xl p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-800 flex items-center">
-            <FaBell className="mr-3 text-red-600" />
-            System Alerts
-          </h3>
-          <div className="flex space-x-2">
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
-              Mark All Read
-            </button>
-            <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-              Critical Only
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {adminData.systemAlerts.map((alert, index) => (
+      ) : (
+        <>
+          {/* Top KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <motion.div
-              key={alert.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 * index }}
-              className={`p-4 rounded-xl border-l-4 ${
-                alert.type === 'critical' ? 'bg-red-50 border-red-500' :
-                alert.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
-                'bg-blue-50 border-blue-500'
-              }`}
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className={`font-semibold ${
-                    alert.type === 'critical' ? 'text-red-800' :
-                    alert.type === 'warning' ? 'text-yellow-800' :
-                    'text-blue-800'
-                  }`}>
-                    {alert.title}
-                  </h4>
-                  <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
-                  <span className="text-xs text-gray-500 mt-2 block">{alert.timestamp}</span>
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Water Points</p>
+                  <p className="text-4xl font-bold">{adminData.systemStats.totalWaterPoints}</p>
+                  <div className="flex items-center mt-2">
+                    <FaArrowUp className="text-green-300 mr-1" />
+                    <span className="text-green-300 text-sm">+8.2% this month</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {!alert.acknowledged && (
-                    <div className={`w-3 h-3 rounded-full ${
-                      alert.type === 'critical' ? 'bg-red-500' :
-                      alert.type === 'warning' ? 'bg-yellow-500' :
-                      'bg-blue-500'
-                    }`}></div>
-                  )}
-                  <button className="p-1 text-gray-400 hover:text-gray-600">
-                    <FaTimes />
-                  </button>
+                <div className="p-4 bg-white bg-opacity-20 rounded-full">
+                  <FaWater className="text-3xl" />
                 </div>
               </div>
             </motion.div>
-          ))}
-        </div>
-      </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">Active Users</p>
+                  <p className="text-4xl font-bold">{(adminData.systemStats.activeUsers / 1000).toFixed(1)}K</p>
+                  <div className="flex items-center mt-2">
+                    <FaArrowUp className="text-green-300 mr-1" />
+                    <span className="text-green-300 text-sm">+12.4% this month</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-white bg-opacity-20 rounded-full">
+                  <FaUsers className="text-3xl" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Monthly Revenue</p>
+                  <p className="text-4xl font-bold">₦{(adminData.systemStats.monthlyRevenue / 1000000).toFixed(1)}M</p>
+                  <div className="flex items-center mt-2">
+                    <FaArrowUp className="text-green-300 mr-1" />
+                    <span className="text-green-300 text-sm">+15.7% this month</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-white bg-opacity-20 rounded-full">
+                  <FaMoneyBillWave className="text-3xl" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -translate-y-4 translate-x-4"></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">System Efficiency</p>
+                  <p className="text-4xl font-bold">{adminData.systemStats.systemEfficiency}%</p>
+                  <div className="flex items-center mt-2">
+                    <FaArrowUp className="text-green-300 mr-1" />
+                    <span className="text-green-300 text-sm">+2.1% this month</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-white bg-opacity-20 rounded-full">
+                  <FaRocket className="text-3xl" />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Secondary Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-cyan-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.activePoints}</p>
+                <p className="text-sm text-gray-600">Active Points</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="bg-cyan-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.activePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-yellow-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.maintenancePoints}</p>
+                <p className="text-sm text-gray-600">Maintenance</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="bg-yellow-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.maintenancePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-red-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.offlinePoints}</p>
+                <p className="text-sm text-gray-600">Offline</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="bg-red-500 h-2 rounded-full" style={{width: `${(adminData.systemStats.offlinePoints/adminData.systemStats.totalWaterPoints)*100}%`}}></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.alertsToday}</p>
+                <p className="text-sm text-gray-600">Today's Alerts</p>
+                <div className="flex justify-center mt-2">
+                  <FaBell className="text-green-500" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.newRegistrations}</p>
+                <p className="text-sm text-gray-600">New Users</p>
+                <div className="flex justify-center mt-2">
+                  <FaUserCircle className="text-purple-500" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-indigo-500">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{adminData.systemStats.customerSatisfaction}%</p>
+                <p className="text-sm text-gray-600">Satisfaction</p>
+                <div className="flex justify-center mt-2">
+                  <FaThumbsUp className="text-indigo-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Regional Performance and Recent Activities */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Regional Performance */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-2xl shadow-xl p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                  <FaGlobe className="mr-3 text-blue-600" />
+                  Regional Performance
+                </h3>
+                <button 
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  onClick={() => fetchOverviewData(localStorage.getItem('token'))}
+                >
+                  Refresh Data
+                </button>
+              </div>
+              <div className="space-y-4">
+                {adminData.regionalData.map((region, index) => (
+                  <motion.div
+                    key={region.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800">{region.region}</h4>
+                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                        <div>
+                          <p className="text-gray-600">Points: <span className="font-medium">{region.waterPoints}</span></p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Coverage: <span className="font-medium">{region.coverage}%</span></p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Quality: <span className="font-medium">{region.qualityScore}</span></p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        region.status === 'excellent' ? 'bg-green-100 text-green-800' :
+                        region.status === 'good' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {region.status}
+                      </div>
+                      <button className="p-2 text-gray-400 hover:text-gray-600">
+                        <FaEye />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Recent Activities */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white rounded-2xl shadow-xl p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                  <FaHistory className="mr-3 text-green-600" />
+                  Recent Activities
+                </h3>
+                <button 
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  onClick={() => fetchOverviewData(localStorage.getItem('token'))}
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="space-y-4">
+                {adminData.recentActivities.map((activity, index) => (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div className={`p-2 rounded-full ${
+                      activity.type === 'maintenance' ? 'bg-yellow-100 text-yellow-600' :
+                      activity.type === 'alert' ? 'bg-red-100 text-red-600' :
+                      activity.type === 'user' ? 'bg-blue-100 text-blue-600' :
+                      'bg-green-100 text-green-600'
+                    }`}>
+                      {activity.type === 'maintenance' ? <FaTools /> :
+                      activity.type === 'alert' ? <FaExclamationTriangle /> :
+                      activity.type === 'user' ? <FaUserCircle /> :
+                      <FaMoneyBillWave />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800">{activity.title}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{activity.location} • {activity.user}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-500">{activity.timestamp}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          activity.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          activity.status === 'investigating' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {activity.status}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* System Alerts */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="bg-white rounded-2xl shadow-xl p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                <FaBell className="mr-3 text-red-600" />
+                System Alerts
+              </h3>
+              <div className="flex space-x-2">
+                <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                  Mark All Read
+                </button>
+                <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                  Critical Only
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {adminData.systemAlerts.map((alert, index) => (
+                <motion.div
+                  key={alert.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  className={`p-4 rounded-xl border-l-4 ${
+                    alert.type === 'critical' ? 'bg-red-50 border-red-500' :
+                    alert.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+                    'bg-blue-50 border-blue-500'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className={`font-semibold ${
+                        alert.type === 'critical' ? 'text-red-800' :
+                        alert.type === 'warning' ? 'text-yellow-800' :
+                        'text-blue-800'
+                      }`}>
+                        {alert.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
+                      <span className="text-xs text-gray-500 mt-2 block">{alert.timestamp}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {!alert.acknowledged && (
+                        <div className={`w-3 h-3 rounded-full ${
+                          alert.type === 'critical' ? 'bg-red-500' :
+                          alert.type === 'warning' ? 'bg-yellow-500' :
+                          'bg-blue-500'
+                        }`}></div>
+                      )}
+                      <button className="p-1 text-gray-400 hover:text-gray-600">
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </>
+      )}
     </div>
   );
-
-
-
-
 
   // User Management Component
   const UserManagement = () => (
@@ -658,6 +797,15 @@ const AdminDashboard = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <p className="text-gray-600">Comprehensive user management interface will be implemented here.</p>
         <p className="text-gray-600 mt-2">Features include: User profiles, Access control, Activity tracking, Communication tools.</p>
+        
+        <div className="mt-4">
+          <button 
+            onClick={() => fetchUserManagement(localStorage.getItem('token'))}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Load Users from API
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -668,7 +816,10 @@ const AdminDashboard = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Financial Management Center</h2>
         <div className="flex space-x-3">
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
+          <button 
+            onClick={() => generateReport('financial', '2024-01-01', '2024-12-31')}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
             <FaChartLine className="mr-2" />
             Generate Report
           </button>
@@ -682,6 +833,15 @@ const AdminDashboard = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <p className="text-gray-600">Complete financial management system will be implemented here.</p>
         <p className="text-gray-600 mt-2">Features include: Revenue tracking, Payment processing, Budget management, Financial reporting.</p>
+        
+        <div className="mt-4">
+          <button 
+            onClick={() => fetchFinancialManagement(localStorage.getItem('token'))}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Load Financial Data
+          </button>
+        </div>
       </div>
     </div>
   );
