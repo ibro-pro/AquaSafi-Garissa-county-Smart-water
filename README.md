@@ -1,1 +1,0 @@
-# AquaSafi-Garissa-county-Smart-water
