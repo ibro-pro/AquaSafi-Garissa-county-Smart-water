@@ -43,6 +43,44 @@ def token_required(f):
     
     return decorated
 
+def admin_token_required(f):
+    """Decorator to verify admin JWT token"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        
+        # Get token from header
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(" ")[1]
+            except IndexError:
+                return jsonify({'message': 'Bearer token malformed'}), 401
+        
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+        
+        try:
+            # Decode token
+            data = JWTUtils.decode_auth_token(token)
+            if isinstance(data, str):
+                return jsonify({'message': data}), 401
+            
+            # Check if user is admin
+            if data.get('role') != 'admin':
+                return jsonify({'message': 'Admin access required'}), 403
+            
+            current_user = {
+                'user_id': data['sub'],
+                'role': data.get('role', 'user')
+            }
+        except Exception as e:
+            return jsonify({'message': 'Token is invalid'}), 401
+        
+        return f(current_user, *args, **kwargs)
+    
+    return decorated
+
 def init_db():
     """Initialize SQLite database"""
     conn = sqlite3.connect('aquasafi.db')
@@ -68,6 +106,33 @@ def init_db():
             is_active BOOLEAN DEFAULT TRUE
         )
     ''')
+    
+    # Create admins table (simple email + password only)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name TEXT DEFAULT 'Administrator',
+            role TEXT DEFAULT 'super_admin',
+            is_active BOOLEAN DEFAULT TRUE,
+            last_login TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Create default admin if not exists
+    cursor.execute('SELECT id FROM admins WHERE email = ?', ('admin@watermanagement.com',))
+    admin_exists = cursor.fetchone()
+    
+    if not admin_exists:
+        hashed_password = PasswordUtils.hash_password('admin123')
+        cursor.execute('''
+            INSERT INTO admins (email, password_hash, name, role, is_active)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ('admin@watermanagement.com', hashed_password, 'System Administrator', 'super_admin', True))
+        print("✅ Default admin created: admin@watermanagement.com")
     
     conn.commit()
     conn.close()
@@ -111,6 +176,287 @@ class ValidationUtils:
         # Remove all non-digit characters except +
         cleaned = re.sub(r'[^\d+]', '', phone_number)
         return cleaned
+
+# ===== ADMIN ENDPOINTS =====
+
+@user_bp.route('/admin/login', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://127.0.0.1:5173', 'http://localhost:5173'], 
+              methods=['POST', 'OPTIONS'],
+              allow_headers=['Content-Type'])
+def admin_login():
+    """Admin login endpoint"""
+    if request.method == 'OPTIONS':
+        return jsonify({'message': 'OK'}), 200
+        
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('email') or not data.get('password'):
+            return jsonify({
+                'message': 'Email and password are required',
+                'success': False
+            }), 400
+        
+        # Find admin
+        conn = sqlite3.connect('aquasafi.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, email, password_hash, name, role, is_active 
+            FROM admins 
+            WHERE email = ?
+        ''', (data['email'],))
+        
+        admin = cursor.fetchone()
+        
+        if not admin:
+            conn.close()
+            return jsonify({
+                'message': 'Invalid email or password',
+                'success': False
+            }), 401
+        
+        admin_id, email, password_hash, name, role, is_active = admin
+        
+        if not is_active:
+            conn.close()
+            return jsonify({
+                'message': 'Admin account is deactivated',
+                'success': False
+            }), 401
+        
+        # Verify password
+        if not PasswordUtils.verify_password(password_hash, data['password']):
+            conn.close()
+            return jsonify({
+                'message': 'Invalid email or password',
+                'success': False
+            }), 401
+        
+        # Update last login
+        cursor.execute(
+            'UPDATE admins SET last_login = ?, updated_at = ? WHERE id = ?',
+            (datetime.now(), datetime.now(), admin_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        # Generate JWT token with admin role
+        token = JWTUtils.encode_auth_token(str(admin_id), 'admin')
+        
+        return jsonify({
+            'message': 'Admin login successful',
+            'success': True,
+            'admin': {
+                'id': admin_id,
+                'email': email,
+                'name': name,
+                'role': role
+            },
+            'token': token
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Admin login error: {str(e)}')
+        return jsonify({
+            'message': 'Internal server error',
+            'success': False
+        }), 500
+
+@user_bp.route('/admin/profile', methods=['GET'])
+@cross_origin()
+@admin_token_required
+def get_admin_profile(current_user):
+    """Get admin profile"""
+    try:
+        conn = sqlite3.connect('aquasafi.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, email, name, role, last_login, created_at
+            FROM admins 
+            WHERE id = ? AND is_active = TRUE
+        ''', (current_user['user_id'],))
+        
+        admin = cursor.fetchone()
+        conn.close()
+        
+        if not admin:
+            return jsonify({
+                'message': 'Admin not found',
+                'success': False
+            }), 404
+        
+        admin_data = {
+            'id': admin[0],
+            'email': admin[1],
+            'name': admin[2],
+            'role': admin[3],
+            'lastLogin': admin[4],
+            'createdAt': admin[5]
+        }
+        
+        return jsonify({
+            'message': 'Admin profile retrieved successfully',
+            'success': True,
+            'admin': admin_data
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Admin profile error: {str(e)}')
+        return jsonify({
+            'message': 'Internal server error',
+            'success': False
+        }), 500
+
+@user_bp.route('/admin/users', methods=['GET'])
+@cross_origin()
+@admin_token_required
+def admin_get_users(current_user):
+    """Get all users (admin only)"""
+    try:
+        conn = sqlite3.connect('aquasafi.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, email, full_name, phone_number, location, community, 
+                   role, organization, created_at, is_active
+            FROM users 
+            ORDER BY created_at DESC
+        ''')
+        
+        users = cursor.fetchall()
+        conn.close()
+        
+        users_list = []
+        for user in users:
+            users_list.append({
+                'id': user[0],
+                'email': user[1],
+                'fullName': user[2],
+                'phoneNumber': user[3],
+                'location': user[4],
+                'community': user[5],
+                'role': user[6],
+                'organization': user[7],
+                'createdAt': user[8],
+                'isActive': bool(user[9])
+            })
+        
+        return jsonify({
+            'message': 'Users retrieved successfully',
+            'success': True,
+            'users': users_list,
+            'count': len(users_list)
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Admin get users error: {str(e)}')
+        return jsonify({
+            'message': 'Internal server error',
+            'success': False
+        }), 500
+
+@user_bp.route('/admin/users/<int:user_id>/toggle-active', methods=['PUT'])
+@cross_origin()
+@admin_token_required
+def toggle_user_active(current_user, user_id):
+    """Toggle user active status (admin only)"""
+    try:
+        conn = sqlite3.connect('aquasafi.db')
+        cursor = conn.cursor()
+        
+        # Get current status
+        cursor.execute('SELECT is_active FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({
+                'message': 'User not found',
+                'success': False
+            }), 404
+        
+        # Toggle status
+        new_status = not bool(user[0])
+        cursor.execute(
+            'UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?',
+            (new_status, datetime.now(), user_id)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        action = "activated" if new_status else "deactivated"
+        return jsonify({
+            'message': f'User {action} successfully',
+            'success': True,
+            'isActive': new_status
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Toggle user active error: {str(e)}')
+        return jsonify({
+            'message': 'Internal server error',
+            'success': False
+        }), 500
+
+@user_bp.route('/admin/stats', methods=['GET'])
+@cross_origin()
+@admin_token_required
+def get_admin_stats(current_user):
+    """Get admin dashboard statistics"""
+    try:
+        conn = sqlite3.connect('aquasafi.db')
+        cursor = conn.cursor()
+        
+        # Get total users count
+        cursor.execute('SELECT COUNT(*) FROM users')
+        total_users = cursor.fetchone()[0]
+        
+        # Get active users count
+        cursor.execute('SELECT COUNT(*) FROM users WHERE is_active = TRUE')
+        active_users = cursor.fetchone()[0]
+        
+        # Get users by role
+        cursor.execute('''
+            SELECT role, COUNT(*) as count 
+            FROM users 
+            GROUP BY role
+        ''')
+        users_by_role = {row[0]: row[1] for row in cursor.fetchall()}
+        
+        # Get recent registrations (last 7 days)
+        cursor.execute('''
+            SELECT COUNT(*) 
+            FROM users 
+            WHERE created_at >= datetime('now', '-7 days')
+        ''')
+        recent_registrations = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'message': 'Admin stats retrieved successfully',
+            'success': True,
+            'stats': {
+                'totalUsers': total_users,
+                'activeUsers': active_users,
+                'inactiveUsers': total_users - active_users,
+                'usersByRole': users_by_role,
+                'recentRegistrations': recent_registrations
+            }
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Admin stats error: {str(e)}')
+        return jsonify({
+            'message': 'Internal server error',
+            'success': False
+        }), 500
+
+# ===== REGULAR USER ENDPOINTS =====
 
 @user_bp.route('/register', methods=['POST', 'OPTIONS'])
 @cross_origin(origins=['http://127.0.0.1:5173', 'http://localhost:5173'], 

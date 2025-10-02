@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaWater,
@@ -38,181 +38,235 @@ import {
   FaMicrochip,
   FaBolt,
   FaLeaf,
-  FaIndustry
+  FaIndustry,
+  FaSave,
+  FaTimes
 } from 'react-icons/fa';
+
+// API base URL - adjust according to your backend
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const WaterInfrastructure = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');
-  const [_showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedWaterPoint, setSelectedWaterPoint] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [waterPoints, setWaterPoints] = useState([]);
+  const [error, setError] = useState(null);
 
-  // Mock water infrastructure data
-  const [waterPoints] = useState([
-    {
-      id: 'WP001',
-      name: 'Garissa Main Borehole',
-      type: 'Borehole',
-      location: {
-        region: 'Garissa Town',
-        coordinates: { lat: -0.4569, lng: 39.6582 },
-        address: 'Garissa Town Center, Main Street'
-      },
-      status: 'active',
-      capacity: 5000,
-      currentFlow: 45.2,
-      waterQuality: {
-        ph: 7.2,
-        temperature: 24.5,
-        turbidity: 2.1,
-        chlorine: 0.8,
-        tds: 450,
-        grade: 'excellent'
-      },
-      equipment: {
-        pump: { model: 'Grundfos SP 30-2', status: 'operational', lastMaintenance: '2024-08-15' },
-        generator: { model: 'Caterpillar C9', status: 'operational', fuelLevel: 85 },
-        sensors: { temperature: 'online', flow: 'online', quality: 'online' },
-        connectivity: 'online'
-      },
-      technician: {
-        name: 'Ahmed Hassan',
-        phone: '+254712345678',
-        email: 'ahmed.hassan@aquasafi.ke'
-      },
-      lastInspection: '2024-09-25',
-      nextMaintenance: '2024-10-15',
-      commissionDate: '2023-03-15',
-      servingPopulation: 2500,
-      dailyUsage: 3200,
-      monthlyRevenue: 145000,
-      alerts: []
-    },
-    {
-      id: 'WP002',
-      name: 'Dadaab Treatment Plant',
-      type: 'Treatment Plant',
-      location: {
-        region: 'Dadaab Complex',
-        coordinates: { lat: -0.0566, lng: 40.3119 },
-        address: 'Dadaab Refugee Complex, Section A'
-      },
-      status: 'maintenance',
-      capacity: 15000,
-      currentFlow: 0,
-      waterQuality: {
-        ph: 7.4,
-        temperature: 26.1,
-        turbidity: 1.8,
-        chlorine: 1.2,
-        tds: 420,
-        grade: 'good'
-      },
-      equipment: {
-        pump: { model: 'Grundfos CR 64-3', status: 'maintenance', lastMaintenance: '2024-09-28' },
-        generator: { model: 'Perkins 1104D', status: 'operational', fuelLevel: 92 },
-        sensors: { temperature: 'online', flow: 'offline', quality: 'online' },
-        connectivity: 'online'
-      },
-      technician: {
-        name: 'Sarah Mwangi',
-        phone: '+254798765432',
-        email: 'sarah.mwangi@aquasafi.ke'
-      },
-      lastInspection: '2024-09-28',
-      nextMaintenance: '2024-10-01',
-      commissionDate: '2022-11-20',
-      servingPopulation: 8500,
-      dailyUsage: 0,
-      monthlyRevenue: 0,
-      alerts: [
-        { type: 'maintenance', message: 'Pump replacement scheduled for tomorrow', priority: 'high' }
-      ]
-    },
-    {
-      id: 'WP003',
-      name: 'Sankuri Community Well',
-      type: 'Community Well',
-      location: {
-        region: 'Sankuri',
-        coordinates: { lat: -0.4234, lng: 39.7123 },
-        address: 'Sankuri Village, Community Center'
-      },
-      status: 'alert',
-      capacity: 2000,
-      currentFlow: 12.8,
-      waterQuality: {
-        ph: 6.1,
-        temperature: 28.3,
-        turbidity: 8.5,
-        chlorine: 0.3,
-        tds: 680,
-        grade: 'poor'
-      },
-      equipment: {
-        pump: { model: 'Pedrollo 4SR', status: 'operational', lastMaintenance: '2024-07-20' },
-        generator: { model: 'Honda EU22i', status: 'low_fuel', fuelLevel: 15 },
-        sensors: { temperature: 'online', flow: 'online', quality: 'alert' },
-        connectivity: 'weak'
-      },
-      technician: {
-        name: 'Mohamed Ali',
-        phone: '+254723456789',
-        email: 'mohamed.ali@aquasafi.ke'
-      },
-      lastInspection: '2024-09-20',
-      nextMaintenance: '2024-10-20',
-      commissionDate: '2023-08-10',
-      servingPopulation: 1200,
-      dailyUsage: 980,
-      monthlyRevenue: 67000,
-      alerts: [
-        { type: 'critical', message: 'Water quality below standards - immediate action required', priority: 'critical' },
-        { type: 'warning', message: 'Generator fuel level low', priority: 'medium' }
-      ]
-    },
-    {
-      id: 'WP004',
-      name: 'Ijara Distribution Hub',
-      type: 'Distribution Hub',
-      location: {
-        region: 'Ijara District',
-        coordinates: { lat: -1.3267, lng: 40.5317 },
-        address: 'Ijara Township, Industrial Area'
-      },
-      status: 'active',
-      capacity: 8000,
-      currentFlow: 62.7,
-      waterQuality: {
-        ph: 7.6,
-        temperature: 25.2,
-        turbidity: 1.2,
-        chlorine: 1.0,
-        tds: 380,
-        grade: 'excellent'
-      },
-      equipment: {
-        pump: { model: 'Wilo Helix V 5203', status: 'operational', lastMaintenance: '2024-08-30' },
-        generator: { model: 'Cummins QSB7', status: 'operational', fuelLevel: 78 },
-        sensors: { temperature: 'online', flow: 'online', quality: 'online' },
-        connectivity: 'online'
-      },
-      technician: {
-        name: 'Grace Kiprotich',
-        phone: '+254734567890',
-        email: 'grace.kiprotich@aquasafi.ke'
-      },
-      lastInspection: '2024-09-22',
-      nextMaintenance: '2024-11-30',
-      commissionDate: '2023-01-25',
-      servingPopulation: 4200,
-      dailyUsage: 5100,
-      monthlyRevenue: 234000,
-      alerts: []
+  // Form state for adding new water point
+  const [newWaterPoint, setNewWaterPoint] = useState({
+    name: '',
+    type: 'Borehole',
+    region: '',
+    location: '',
+    latitude: '',
+    longitude: '',
+    capacity: '',
+    current_level: 0,
+    quality_score: 0,
+    coverage: 0,
+    population_served: '',
+    water_source: 'Groundwater',
+    infrastructure_type: 'Public',
+    treatment_method: 'Chlorination',
+    status: 'active',
+    notes: ''
+  });
+
+  // Fetch water points from backend
+  const fetchWaterPoints = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch water points');
+      }
+
+      const data = await response.json();
+      setWaterPoints(data.water_points || []);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching water points:', err);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  // Fetch detailed water point data
+  const fetchWaterPointDetails = async (waterPointId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points/${waterPointId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch water point details');
+      }
+
+      const data = await response.json();
+      return data.water_point;
+    } catch (err) {
+      console.error('Error fetching water point details:', err);
+      throw err;
+    }
+  };
+
+  // Create new water point
+  const createWaterPoint = async (waterPointData) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(waterPointData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create water point');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Error creating water point:', err);
+      throw err;
+    }
+  };
+
+  // Update water point
+  const updateWaterPoint = async (waterPointId, updateData) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points/${waterPointId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update water point');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Error updating water point:', err);
+      throw err;
+    }
+  };
+
+  // Delete water point
+  const deleteWaterPoint = async (waterPointId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points/${waterPointId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete water point');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Error deleting water point:', err);
+      throw err;
+    }
+  };
+
+  // Archive water point
+  const archiveWaterPoint = async (waterPointId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/admin/water-points/${waterPointId}/archive`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to archive water point');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Error archiving water point:', err);
+      throw err;
+    }
+  };
+
+  // Export data
+  const exportData = async () => {
+    try {
+      setIsExporting(true);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/export/water_points`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `water_points_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting data:', err);
+      alert('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Load water points on component mount
+  useEffect(() => {
+    fetchWaterPoints();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -220,6 +274,7 @@ const WaterInfrastructure = () => {
       case 'maintenance': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'alert': return 'bg-red-100 text-red-800 border-red-200';
       case 'offline': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'archived': return 'bg-gray-100 text-gray-800 border-gray-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -244,12 +299,114 @@ const WaterInfrastructure = () => {
     }
   };
 
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewWaterPoint(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle form submission
+  const handleAddWaterPoint = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Prepare data for API
+      const waterPointData = {
+        name: newWaterPoint.name,
+        type: newWaterPoint.type,
+        region: newWaterPoint.region,
+        location: newWaterPoint.location,
+        latitude: newWaterPoint.latitude !== '' ? parseFloat(newWaterPoint.latitude) : null,
+        longitude: newWaterPoint.longitude !== '' ? parseFloat(newWaterPoint.longitude) : null,
+        capacity: newWaterPoint.capacity !== '' ? parseInt(newWaterPoint.capacity) : null,
+        current_level: newWaterPoint.current_level !== '' ? parseInt(newWaterPoint.current_level) : 0,
+        quality_score: newWaterPoint.quality_score !== '' ? parseInt(newWaterPoint.quality_score) : 0,
+        coverage: newWaterPoint.coverage !== '' ? parseInt(newWaterPoint.coverage) : 0,
+        population_served: newWaterPoint.population_served !== '' ? parseInt(newWaterPoint.population_served) : null,
+        water_source: newWaterPoint.water_source,
+        infrastructure_type: newWaterPoint.infrastructure_type,
+        treatment_method: newWaterPoint.treatment_method,
+        status: newWaterPoint.status,
+        notes: newWaterPoint.notes
+      };
+
+      await createWaterPoint(waterPointData);
+      
+      // Refresh the water points list
+      await fetchWaterPoints();
+      
+      // Reset form and close modal
+      setNewWaterPoint({
+        name: '',
+        type: 'Borehole',
+        region: '',
+        location: '',
+        latitude: '',
+        longitude: '',
+        capacity: '',
+        current_level: 0,
+        quality_score: 0,
+        coverage: 0,
+        population_served: '',
+        water_source: 'Groundwater',
+        infrastructure_type: 'Public',
+        treatment_method: 'Chlorination',
+        status: 'active',
+        notes: ''
+      });
+      
+      setShowAddModal(false);
+    } catch (err) {
+      alert(`Error creating water point: ${err.message}`);
+    }
+  };
+
+  // Handle view details
+  const handleViewDetails = async (waterPoint) => {
+    try {
+      const detailedData = await fetchWaterPointDetails(waterPoint.id);
+      setSelectedWaterPoint(detailedData);
+      setShowDetailsModal(true);
+    } catch (err) {
+      alert(`Error fetching details: ${err.message}`);
+    }
+  };
+
+  // Handle delete water point
+  const handleDeleteWaterPoint = async (waterPointId, waterPointName) => {
+    if (window.confirm(`Are you sure you want to delete "${waterPointName}"?`)) {
+      try {
+        await deleteWaterPoint(waterPointId);
+        await fetchWaterPoints(); // Refresh the list
+        alert('Water point deleted successfully');
+      } catch (err) {
+        alert(`Error deleting water point: ${err.message}`);
+      }
+    }
+  };
+
+  // Handle archive water point
+  const handleArchiveWaterPoint = async (waterPointId, waterPointName) => {
+    if (window.confirm(`Are you sure you want to archive "${waterPointName}"?`)) {
+      try {
+        await archiveWaterPoint(waterPointId);
+        await fetchWaterPoints(); // Refresh the list
+        alert('Water point archived successfully');
+      } catch (err) {
+        alert(`Error archiving water point: ${err.message}`);
+      }
+    }
+  };
+
   const filteredWaterPoints = waterPoints.filter(point => {
     const matchesSearch = point.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         point.location.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         point.id.toLowerCase().includes(searchTerm.toLowerCase());
+                         point.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         point.id.toString().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || point.status === statusFilter;
-    const matchesRegion = regionFilter === 'all' || point.location.region === regionFilter;
+    const matchesRegion = regionFilter === 'all' || point.region === regionFilter;
     
     return matchesSearch && matchesStatus && matchesRegion;
   });
@@ -268,73 +425,61 @@ const WaterInfrastructure = () => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-800">{waterPoint.name}</h3>
-            <p className="text-sm text-gray-600">{waterPoint.id} • {waterPoint.type}</p>
+            <p className="text-sm text-gray-600">ID: {waterPoint.id} • {waterPoint.type}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(waterPoint.status)}`}>
             {waterPoint.status}
           </span>
-          {waterPoint.alerts.length > 0 && (
-            <div className="flex items-center space-x-1">
-              <FaBell className="text-red-500 text-sm" />
-              <span className="text-xs text-red-500 font-medium">{waterPoint.alerts.length}</span>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Location */}
       <div className="flex items-center space-x-2 mb-4">
         <FaMapMarkerAlt className="text-gray-400" />
-        <span className="text-sm text-gray-600">{waterPoint.location.region}</span>
+        <span className="text-sm text-gray-600">{waterPoint.region}</span>
         <span className="text-xs text-gray-400">•</span>
-        <span className="text-sm text-gray-600">{waterPoint.servingPopulation.toLocaleString()} people</span>
+        <span className="text-sm text-gray-600">{waterPoint.population_served?.toLocaleString()} people</span>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-blue-50 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-700">Flow Rate</span>
+            <span className="text-sm text-blue-700">Capacity</span>
             <FaWater className="text-blue-500" />
           </div>
-          <p className="text-lg font-bold text-blue-800">{waterPoint.currentFlow} L/min</p>
+          <p className="text-lg font-bold text-blue-800">{waterPoint.capacity?.toLocaleString()} L</p>
         </div>
         <div className="bg-green-50 rounded-lg p-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-green-700">Quality</span>
+            <span className="text-sm text-green-700">Quality Score</span>
             <FaVial className="text-green-500" />
           </div>
-          <p className={`text-lg font-bold capitalize ${getQualityColor(waterPoint.waterQuality.grade)}`}>
-            {waterPoint.waterQuality.grade}
-          </p>
+          <p className="text-lg font-bold text-green-800">{waterPoint.quality_score}%</p>
         </div>
       </div>
 
-      {/* Equipment Status */}
+      {/* Additional Info */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <div className={`w-2 h-2 rounded-full ${
-              waterPoint.equipment.pump.status === 'operational' ? 'bg-green-500' :
-              waterPoint.equipment.pump.status === 'maintenance' ? 'bg-yellow-500' :
+              waterPoint.status === 'active' ? 'bg-green-500' :
+              waterPoint.status === 'maintenance' ? 'bg-yellow-500' :
               'bg-red-500'
             }`} />
-            <span className="text-xs text-gray-600">Pump</span>
+            <span className="text-xs text-gray-600">{waterPoint.status}</span>
           </div>
           <div className="flex items-center space-x-1">
-            <div className={`w-2 h-2 rounded-full ${
-              waterPoint.equipment.connectivity === 'online' ? 'bg-green-500' :
-              waterPoint.equipment.connectivity === 'weak' ? 'bg-yellow-500' :
-              'bg-red-500'
-            }`} />
-            <span className="text-xs text-gray-600">Connectivity</span>
+            <FaMapMarkerAlt className="text-gray-400 text-xs" />
+            <span className="text-xs text-gray-600">{waterPoint.coverage}% coverage</span>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500">Next Maintenance</p>
-          <p className="text-sm font-medium text-gray-700">{waterPoint.nextMaintenance}</p>
+          <p className="text-xs text-gray-500">Current Level</p>
+          <p className="text-sm font-medium text-gray-700">{waterPoint.current_level}%</p>
         </div>
       </div>
 
@@ -342,10 +487,7 @@ const WaterInfrastructure = () => {
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => {
-              setSelectedWaterPoint(waterPoint);
-              setShowDetailsModal(true);
-            }}
+            onClick={() => handleViewDetails(waterPoint)}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="View Details"
           >
@@ -357,10 +499,24 @@ const WaterInfrastructure = () => {
           <button className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Maintenance">
             <FaTools />
           </button>
+          <button 
+            onClick={() => handleArchiveWaterPoint(waterPoint.id, waterPoint.name)}
+            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors" 
+            title="Archive"
+          >
+            <FaTimes />
+          </button>
+          <button 
+            onClick={() => handleDeleteWaterPoint(waterPoint.id, waterPoint.name)}
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+            title="Delete"
+          >
+            <FaTrash />
+          </button>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500">Monthly Revenue</p>
-          <p className="text-sm font-bold text-green-600">₦{waterPoint.monthlyRevenue.toLocaleString()}</p>
+          <p className="text-xs text-gray-500">Water Source</p>
+          <p className="text-sm font-medium text-gray-700">{waterPoint.water_source}</p>
         </div>
       </div>
     </motion.div>
@@ -390,7 +546,7 @@ const WaterInfrastructure = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-gray-800">{selectedWaterPoint.name}</h2>
-                    <p className="text-gray-600">{selectedWaterPoint.id} • {selectedWaterPoint.type}</p>
+                    <p className="text-gray-600">ID: {selectedWaterPoint.id} • {selectedWaterPoint.type}</p>
                   </div>
                 </div>
                 <button
@@ -404,7 +560,7 @@ const WaterInfrastructure = () => {
 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
-              {/* Status and Alerts */}
+              {/* Status and Operations */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-800">Status & Operations</h3>
@@ -416,127 +572,96 @@ const WaterInfrastructure = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Flow Rate</span>
-                      <span className="font-medium">{selectedWaterPoint.currentFlow} L/min</span>
-                    </div>
-                    <div className="flex items-center justify-between">
                       <span className="text-gray-600">Capacity</span>
-                      <span className="font-medium">{selectedWaterPoint.capacity.toLocaleString()} L</span>
+                      <span className="font-medium">{selectedWaterPoint.capacity?.toLocaleString()} L</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Daily Usage</span>
-                      <span className="font-medium">{selectedWaterPoint.dailyUsage.toLocaleString()} L</span>
+                      <span className="text-gray-600">Current Level</span>
+                      <span className="font-medium">{selectedWaterPoint.current_level}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Coverage</span>
+                      <span className="font-medium">{selectedWaterPoint.coverage}%</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Water Quality</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Location & Service</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Overall Grade</span>
-                      <span className={`font-bold capitalize ${getQualityColor(selectedWaterPoint.waterQuality.grade)}`}>
-                        {selectedWaterPoint.waterQuality.grade}
-                      </span>
+                      <span className="text-gray-600">Region</span>
+                      <span className="font-medium">{selectedWaterPoint.region}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">pH Level</span>
-                      <span className="font-medium">{selectedWaterPoint.waterQuality.ph}</span>
+                      <span className="text-gray-600">Location</span>
+                      <span className="font-medium">{selectedWaterPoint.location}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Temperature</span>
-                      <span className="font-medium">{selectedWaterPoint.waterQuality.temperature}°C</span>
+                      <span className="text-gray-600">Population Served</span>
+                      <span className="font-medium">{selectedWaterPoint.population_served?.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">TDS</span>
-                      <span className="font-medium">{selectedWaterPoint.waterQuality.tds} ppm</span>
+                      <span className="text-gray-600">Quality Score</span>
+                      <span className="font-medium">{selectedWaterPoint.quality_score}%</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Equipment Status */}
+              {/* Technical Details */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Equipment Status</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Technical Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-800">Pump System</span>
-                      <div className={`w-3 h-3 rounded-full ${
-                        selectedWaterPoint.equipment.pump.status === 'operational' ? 'bg-green-500' : 'bg-yellow-500'
-                      }`} />
+                      <span className="font-medium text-gray-800">Water Source</span>
                     </div>
-                    <p className="text-sm text-gray-600">{selectedWaterPoint.equipment.pump.model}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Last Maintenance: {selectedWaterPoint.equipment.pump.lastMaintenance}
-                    </p>
+                    <p className="text-sm text-gray-600">{selectedWaterPoint.water_source}</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-800">Generator</span>
-                      <div className={`w-3 h-3 rounded-full ${
-                        selectedWaterPoint.equipment.generator.fuelLevel > 50 ? 'bg-green-500' :
-                        selectedWaterPoint.equipment.generator.fuelLevel > 20 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`} />
+                      <span className="font-medium text-gray-800">Infrastructure Type</span>
                     </div>
-                    <p className="text-sm text-gray-600">{selectedWaterPoint.equipment.generator.model}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Fuel Level: {selectedWaterPoint.equipment.generator.fuelLevel}%
-                    </p>
+                    <p className="text-sm text-gray-600">{selectedWaterPoint.infrastructure_type}</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-800">Treatment Method</span>
+                    </div>
+                    <p className="text-sm text-gray-600">{selectedWaterPoint.treatment_method}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Alerts */}
-              {selectedWaterPoint.alerts.length > 0 && (
+              {/* Coordinates */}
+              {(selectedWaterPoint.latitude || selectedWaterPoint.longitude) && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Active Alerts</h3>
-                  <div className="space-y-3">
-                    {selectedWaterPoint.alerts.map((alert, index) => (
-                      <div key={index} className={`p-4 rounded-xl border-l-4 ${
-                        alert.priority === 'critical' ? 'bg-red-50 border-red-500' :
-                        alert.priority === 'high' ? 'bg-orange-50 border-orange-500' :
-                        'bg-yellow-50 border-yellow-500'
-                      }`}>
-                        <div className="flex items-center space-x-2">
-                          <FaExclamationTriangle className={
-                            alert.priority === 'critical' ? 'text-red-600' :
-                            alert.priority === 'high' ? 'text-orange-600' :
-                            'text-yellow-600'
-                          } />
-                          <span className="font-medium text-gray-800">{alert.message}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Coordinates</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <span className="font-medium text-gray-800">Latitude</span>
+                      <p className="text-sm text-gray-600 mt-1">{selectedWaterPoint.latitude}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <span className="font-medium text-gray-800">Longitude</span>
+                      <p className="text-sm text-gray-600 mt-1">{selectedWaterPoint.longitude}</p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Technician Info */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Assigned Technician</h3>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FaUserCircle className="text-blue-600 text-xl" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">{selectedWaterPoint.technician.name}</h4>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <div className="flex items-center space-x-1">
-                          <FaPhoneAlt className="text-gray-400 text-sm" />
-                          <span className="text-sm text-gray-600">{selectedWaterPoint.technician.phone}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <FaEnvelope className="text-gray-400 text-sm" />
-                          <span className="text-sm text-gray-600">{selectedWaterPoint.technician.email}</span>
-                        </div>
-                      </div>
-                    </div>
+              {/* Notes */}
+              {selectedWaterPoint.notes && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Notes</h3>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-gray-600">{selectedWaterPoint.notes}</p>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -562,6 +687,301 @@ const WaterInfrastructure = () => {
     </AnimatePresence>
   );
 
+  const AddWaterPointModal = () => (
+    <AnimatePresence>
+      {showAddModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          // Removed backdropFilter to prevent blinking
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{
+              type: "spring",
+              damping: 25,
+              stiffness: 300
+            }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            // Removed onClick handler to prevent interference
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 bg-white rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FaPlus className="text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Add New Water Point</h2>
+                    <p className="text-gray-600">Create a new water infrastructure point</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <form onSubmit={handleAddWaterPoint} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Basic Information</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Water Point Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={newWaterPoint.name}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter water point name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type *
+                    </label>
+                    <select
+                      name="type"
+                      value={newWaterPoint.type}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Borehole">Borehole</option>
+                      <option value="Treatment Plant">Treatment Plant</option>
+                      <option value="Community Well">Community Well</option>
+                      <option value="Distribution Hub">Distribution Hub</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Region *
+                    </label>
+                    <input
+                      type="text"
+                      name="region"
+                      value={newWaterPoint.region}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter region"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location Address *
+                    </label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={newWaterPoint.location}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter full address"
+                    />
+                  </div>
+                </div>
+
+                {/* Technical Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Technical Details</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Capacity (Liters) *
+                    </label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      value={newWaterPoint.capacity}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter capacity"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Population Served *
+                    </label>
+                    <input
+                      type="number"
+                      name="population_served"
+                      value={newWaterPoint.population_served}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter population served"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Latitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        name="latitude"
+                        value={newWaterPoint.latitude}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Latitude"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Longitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        name="longitude"
+                        value={newWaterPoint.longitude}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Longitude"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status *
+                    </label>
+                    <select
+                      name="status"
+                      value={newWaterPoint.status}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="active">Active</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="alert">Alert</option>
+                      <option value="offline">Offline</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Additional Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Water Source
+                    </label>
+                    <select
+                      name="water_source"
+                      value={newWaterPoint.water_source}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Groundwater">Groundwater</option>
+                      <option value="Surface Water">Surface Water</option>
+                      <option value="Rainwater">Rainwater</option>
+                      <option value="Mixed">Mixed Sources</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Infrastructure Type
+                    </label>
+                    <select
+                      name="infrastructure_type"
+                      value={newWaterPoint.infrastructure_type}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Public">Public</option>
+                      <option value="Community">Community</option>
+                      <option value="Private">Private</option>
+                      <option value="Institutional">Institutional</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Treatment Method
+                    </label>
+                    <select
+                      name="treatment_method"
+                      value={newWaterPoint.treatment_method}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Chlorination">Chlorination</option>
+                      <option value="Filtration">Filtration</option>
+                      <option value="UV Treatment">UV Treatment</option>
+                      <option value="Boiling">Boiling</option>
+                      <option value="None">None</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    name="notes"
+                    value={newWaterPoint.notes}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Additional notes..."
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <FaSave className="mr-2" />
+                  Add Water Point
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -581,9 +1001,13 @@ const WaterInfrastructure = () => {
             <FaPlus className="mr-2" />
             Add Water Point
           </button>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
+          <button 
+            onClick={exportData}
+            disabled={isExporting}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <FaDownload className="mr-2" />
-            Export Data
+            {isExporting ? 'Exporting...' : 'Export Data'}
           </button>
         </div>
       </div>
@@ -704,8 +1128,9 @@ const WaterInfrastructure = () => {
         </div>
       )}
 
-      {/* Details Modal */}
+      {/* Modals */}
       <WaterPointDetailsModal />
+      <AddWaterPointModal />
     </div>
   );
 };

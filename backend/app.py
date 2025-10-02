@@ -3,10 +3,12 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from config import config
-from models import db
+from models import db, Admin
 from routes.user_routes import user_bp
 from routes.admin_routes import admin_bp
+from routes.api_routes import api
 import os
+from werkzeug.security import generate_password_hash
 
 
 def create_app(config_name=None):
@@ -38,12 +40,39 @@ def create_app(config_name=None):
     # Register blueprints
     app.register_blueprint(user_bp, url_prefix="/api/users")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(api, url_prefix="/api")
 
-    # Auto-create tables if not already created
+    # Auto-create tables and create default admin user
     with app.app_context():
         db.create_all()
+        create_default_admin()
 
     return app
+
+
+def create_default_admin():
+    try:
+        # Check if admin already exists
+        admin = Admin.query.filter_by(email='admin@watermanagement.com').first()
+        
+        if not admin:
+            # Create admin with only email and password
+            admin = Admin(
+                email='admin@watermanagement.com',
+                name='System Administrator',
+                role='super_admin',
+                is_active=True
+            )
+            admin.set_password('admin123')
+            
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Default admin created successfully!")
+        else:
+            print("✅ Admin already exists")
+            
+    except Exception as e:
+        print(f"❌ Error creating default admin: {e}")
 
 
 if __name__ == "__main__":

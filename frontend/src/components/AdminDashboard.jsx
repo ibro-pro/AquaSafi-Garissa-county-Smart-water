@@ -37,7 +37,12 @@ import {
   FaGem,
   FaThumbsUp,
   FaFlask,
-  FaEye
+  FaEye,
+  FaEdit,
+  FaTrash,
+  FaSearch,
+  FaFilter,
+  FaSync
 } from 'react-icons/fa';
 
 const AdminDashboard = () => {
@@ -73,6 +78,115 @@ const AdminDashboard = () => {
   // API Base URL
   const API_BASE = 'http://localhost:5000/api/admin';
 
+  // Enhanced Sidebar Menu Items for Admin
+  const adminMenuItems = [
+    { 
+      id: 'overview', 
+      label: 'System Overview', 
+      icon: FaTachometerAlt, 
+      badge: null,
+      category: 'main'
+    },
+    { 
+      id: 'water-infrastructure', 
+      label: 'Water Infrastructure', 
+      icon: FaWater, 
+      badge: adminData.systemStats.totalWaterPoints?.toString() || '412',
+      category: 'main'
+    },
+    { 
+      id: 'real-time-monitoring', 
+      label: 'Real-time Monitoring', 
+      icon: FaChartLine, 
+      badge: 'LIVE',
+      category: 'main'
+    },
+    { 
+      id: 'user-management', 
+      label: 'User Management', 
+      icon: FaUsersCog, 
+      badge: adminData.systemStats.totalUsers ? `${(adminData.systemStats.totalUsers / 1000).toFixed(1)}K` : '15.4K',
+      category: 'management'
+    },
+    { 
+      id: 'staff-management', 
+      label: 'Staff Management', 
+      icon: FaUsers, 
+      badge: (adminData.systemStats.administrativeStaff + adminData.systemStats.fieldTechnicians)?.toString() || '123',
+      category: 'management'
+    },
+    { 
+      id: 'financial-management', 
+      label: 'Financial Management', 
+      icon: FaMoneyBillWave, 
+      badge: null,
+      category: 'management'
+    },
+    { 
+      id: 'inventory-assets', 
+      label: 'Inventory & Assets', 
+      icon: FaWarehouse, 
+      badge: null,
+      category: 'operations'
+    },
+    { 
+      id: 'maintenance-operations', 
+      label: 'Maintenance Operations', 
+      icon: FaTools, 
+      badge: adminData.systemStats.maintenancePoints?.toString() || '23',
+      category: 'operations'
+    },
+    { 
+      id: 'quality-control', 
+      label: 'Quality Control', 
+      icon: FaFlask, 
+      badge: null,
+      category: 'operations'
+    },
+    { 
+      id: 'reports-analytics', 
+      label: 'Reports & Analytics', 
+      icon: FaChartBar, 
+      badge: null,
+      category: 'analytics'
+    },
+    { 
+      id: 'emergency-response', 
+      label: 'Emergency Response', 
+      icon: FaExclamationTriangle, 
+      badge: adminData.systemStats.alertsToday?.toString() || '3',
+      category: 'emergency'
+    },
+    { 
+      id: 'communication-center', 
+      label: 'Communication Center', 
+      icon: FaBullhorn, 
+      badge: null,
+      category: 'communication'
+    },
+    { 
+      id: 'system-administration', 
+      label: 'System Administration', 
+      icon: FaShieldAlt, 
+      badge: null,
+      category: 'system'
+    },
+    { 
+      id: 'audit-logs', 
+      label: 'Audit & Logs', 
+      icon: FaHistory, 
+      badge: null,
+      category: 'system'
+    },
+    { 
+      id: 'settings-configuration', 
+      label: 'Settings & Configuration', 
+      icon: FaCog, 
+      badge: null,
+      category: 'system'
+    }
+  ];
+
   // Fetch data based on active tab
   useEffect(() => {
     const fetchData = async () => {
@@ -106,9 +220,7 @@ const AdminDashboard = () => {
       }
     };
 
-    if (activeTab === 'overview') {
-      fetchData();
-    }
+    fetchData();
   }, [activeTab]);
 
   // API Functions
@@ -317,114 +429,583 @@ const AdminDashboard = () => {
     }
   };
 
-  // Enhanced Sidebar Menu Items for Admin
-  const adminMenuItems = [
-    { 
-      id: 'overview', 
-      label: 'System Overview', 
-      icon: FaTachometerAlt, 
-      badge: null,
-      category: 'main'
-    },
-    { 
-      id: 'water-infrastructure', 
-      label: 'Water Infrastructure', 
-      icon: FaWater, 
-      badge: adminData.systemStats.totalWaterPoints?.toString() || '412',
-      category: 'main'
-    },
-    { 
-      id: 'real-time-monitoring', 
-      label: 'Real-time Monitoring', 
-      icon: FaChartLine, 
-      badge: 'LIVE',
-      category: 'main'
-    },
-    { 
-      id: 'user-management', 
-      label: 'User Management', 
-      icon: FaUsersCog, 
-      badge: adminData.systemStats.totalUsers ? `${(adminData.systemStats.totalUsers / 1000).toFixed(1)}K` : '15.4K',
-      category: 'management'
-    },
-    { 
-      id: 'staff-management', 
-      label: 'Staff Management', 
-      icon: FaUsers, 
-      badge: (adminData.systemStats.administrativeStaff + adminData.systemStats.fieldTechnicians)?.toString() || '123',
-      category: 'management'
-    },
-    { 
-      id: 'financial-management', 
-      label: 'Financial Management', 
-      icon: FaMoneyBillWave, 
-      badge: null,
-      category: 'management'
-    },
-    { 
-      id: 'inventory-assets', 
-      label: 'Inventory & Assets', 
-      icon: FaWarehouse, 
-      badge: null,
-      category: 'operations'
-    },
-    { 
-      id: 'maintenance-operations', 
-      label: 'Maintenance Operations', 
-      icon: FaTools, 
-      badge: adminData.systemStats.maintenancePoints?.toString() || '23',
-      category: 'operations'
-    },
-    { 
-      id: 'quality-control', 
-      label: 'Quality Control', 
-      icon: FaFlask, 
-      badge: null,
-      category: 'operations'
-    },
-    { 
-      id: 'reports-analytics', 
-      label: 'Reports & Analytics', 
-      icon: FaChartBar, 
-      badge: null,
-      category: 'analytics'
-    },
-    { 
-      id: 'emergency-response', 
-      label: 'Emergency Response', 
-      icon: FaExclamationTriangle, 
-      badge: adminData.systemStats.alertsToday?.toString() || '3',
-      category: 'emergency'
-    },
-    { 
-      id: 'communication-center', 
-      label: 'Communication Center', 
-      icon: FaBullhorn, 
-      badge: null,
-      category: 'communication'
-    },
-    { 
-      id: 'system-administration', 
-      label: 'System Administration', 
-      icon: FaShieldAlt, 
-      badge: null,
-      category: 'system'
-    },
-    { 
-      id: 'audit-logs', 
-      label: 'Audit & Logs', 
-      icon: FaHistory, 
-      badge: null,
-      category: 'system'
-    },
-    { 
-      id: 'settings-configuration', 
-      label: 'Settings & Configuration', 
-      icon: FaCog, 
-      badge: null,
-      category: 'system'
-    }
-  ];
+  // User Management Component with State
+  const UserManagement = () => {
+    const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [showAddUserModal, setShowAddUserModal] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterRole, setFilterRole] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+    
+    // New user form state
+    const [newUser, setNewUser] = useState({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: 'customer',
+      status: 'active',
+      address: '',
+      region: ''
+    });
+
+    // Fetch users when component mounts
+    useEffect(() => {
+      fetchUsers();
+    }, []);
+
+    // Filter users based on search and filters
+    useEffect(() => {
+      let filtered = users;
+      
+      if (searchTerm) {
+        filtered = filtered.filter(user => 
+          user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      if (filterRole !== 'all') {
+        filtered = filtered.filter(user => user.role === filterRole);
+      }
+      
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter(user => user.status === filterStatus);
+      }
+      
+      setFilteredUsers(filtered);
+    }, [users, searchTerm, filterRole, filterStatus]);
+
+    const fetchUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/user-management`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data.users || []);
+        } else {
+          // Fallback mock data if API fails
+          setUsers(generateMockUsers());
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        // Fallback mock data if API fails
+        setUsers(generateMockUsers());
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    const generateMockUsers = () => {
+      const roles = ['customer', 'technician', 'admin', 'operator'];
+      const statuses = ['active', 'inactive', 'suspended'];
+      const regions = ['Lagos', 'Abuja', 'Port Harcourt', 'Kano', 'Ibadan'];
+      
+      return Array.from({ length: 50 }, (_, i) => ({
+        id: `user_${i + 1}`,
+        firstName: `User${i + 1}`,
+        lastName: `Last${i + 1}`,
+        email: `user${i + 1}@example.com`,
+        phone: `+23480${Math.floor(10000000 + Math.random() * 90000000)}`,
+        role: roles[Math.floor(Math.random() * roles.length)],
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        registrationDate: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
+        lastLogin: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
+        address: `${Math.floor(Math.random() * 1000)} Sample Street`,
+        region: regions[Math.floor(Math.random() * regions.length)],
+        waterUsage: Math.floor(Math.random() * 10000),
+        billsPaid: Math.floor(Math.random() * 12)
+      }));
+    };
+
+    const handleAddUser = async (e) => {
+      e.preventDefault();
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/user-management`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newUser)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(prev => [data.user, ...prev]);
+          setShowAddUserModal(false);
+          setNewUser({
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            role: 'customer',
+            status: 'active',
+            address: '',
+            region: ''
+          });
+          alert('User added successfully!');
+        } else {
+          alert('Error adding user');
+        }
+      } catch (error) {
+        console.error('Error adding user:', error);
+        alert('Error adding user');
+      }
+    };
+
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setNewUser(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+
+    const handleUpdateUserStatus = async (userId, updates) => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/user-management/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(updates)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(prev => prev.map(user => 
+            user.id === userId ? { ...user, ...updates } : user
+          ));
+          alert('User updated successfully!');
+        }
+      } catch (error) {
+        console.error('Error updating user:', error);
+      }
+    };
+
+    const handleDeleteUser = async (userId) => {
+      if (window.confirm('Are you sure you want to delete this user?')) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`${API_BASE}/user-management/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (response.ok) {
+            setUsers(prev => prev.filter(user => user.id !== userId));
+            alert('User deleted successfully!');
+          }
+        } catch (error) {
+          console.error('Error deleting user:', error);
+        }
+      }
+    };
+
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'active': return 'bg-green-100 text-green-800';
+        case 'inactive': return 'bg-gray-100 text-gray-800';
+        case 'suspended': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getRoleColor = (role) => {
+      switch (role) {
+        case 'admin': return 'bg-purple-100 text-purple-800';
+        case 'technician': return 'bg-blue-100 text-blue-800';
+        case 'operator': return 'bg-orange-100 text-orange-800';
+        case 'customer': return 'bg-green-100 text-green-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">User Management System</h2>
+            <p className="text-gray-600">Manage all system users and their permissions</p>
+          </div>
+          <div className="flex space-x-3">
+            <button 
+              onClick={() => setShowAddUserModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+            >
+              <FaPlus className="mr-2" />
+              Add User
+            </button>
+            <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center">
+              <FaUsersCog className="mr-2" />
+              Bulk Actions
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-blue-500">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-800">{users.length}</p>
+              <p className="text-sm text-gray-600">Total Users</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-800">
+                {users.filter(u => u.status === 'active').length}
+              </p>
+              <p className="text-sm text-gray-600">Active Users</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-800">
+                {users.filter(u => u.role === 'customer').length}
+              </p>
+              <p className="text-sm text-gray-600">Customers</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-orange-500">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-800">
+                {users.filter(u => u.role === 'technician').length}
+              </p>
+              <p className="text-sm text-gray-600">Technicians</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <select
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Roles</option>
+              <option value="customer">Customer</option>
+              <option value="technician">Technician</option>
+              <option value="operator">Operator</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <button 
+              onClick={fetchUsers}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+            >
+              <FaSync className="mr-2" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {loadingUsers ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Region
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Last Login
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FaUserCircle className="text-blue-600" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              ID: {user.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{user.email}</div>
+                        <div className="text-sm text-gray-500">{user.phone}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(user.status)}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.region}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(user.lastLogin).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleUpdateUserStatus(user.id, { 
+                              status: user.status === 'active' ? 'inactive' : 'active' 
+                            })}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Add User Modal */}
+        <AnimatePresence>
+          {showAddUserModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+              >
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-gray-800">Add New User</h3>
+                    <button
+                      onClick={() => setShowAddUserModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAddUser} className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={newUser.firstName}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={newUser.lastName}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={newUser.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={newUser.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role *
+                      </label>
+                      <select
+                        name="role"
+                        value={newUser.role}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="customer">Customer</option>
+                        <option value="technician">Technician</option>
+                        <option value="operator">Operator</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status *
+                      </label>
+                      <select
+                        name="status"
+                        value={newUser.status}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={newUser.address}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Region
+                    </label>
+                    <select
+                      name="region"
+                      value={newUser.region}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Region</option>
+                      <option value="Lagos">Lagos</option>
+                      <option value="Abuja">Abuja</option>
+                      <option value="Port Harcourt">Port Harcourt</option>
+                      <option value="Kano">Kano</option>
+                      <option value="Ibadan">Ibadan</option>
+                    </select>
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Add User
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddUserModal(false)}
+                      className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   // System Overview Component
   const SystemOverview = () => (
@@ -774,39 +1355,6 @@ const AdminDashboard = () => {
           </motion.div>
         </>
       )}
-    </div>
-  );
-
-  // User Management Component
-  const UserManagement = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">User Management System</h2>
-        <div className="flex space-x-3">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-            <FaPlus className="mr-2" />
-            Add User
-          </button>
-          <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center">
-            <FaUsersCog className="mr-2" />
-            Bulk Actions
-          </button>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <p className="text-gray-600">Comprehensive user management interface will be implemented here.</p>
-        <p className="text-gray-600 mt-2">Features include: User profiles, Access control, Activity tracking, Communication tools.</p>
-        
-        <div className="mt-4">
-          <button 
-            onClick={() => fetchUserManagement(localStorage.getItem('token'))}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Load Users from API
-          </button>
-        </div>
-      </div>
     </div>
   );
 

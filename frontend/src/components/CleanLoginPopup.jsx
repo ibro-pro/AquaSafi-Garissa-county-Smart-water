@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { FaTimes, FaUser, FaLock, FaEye, FaEyeSlash, FaEnvelope, FaPhone, FaMapMarkerAlt, FaIdCard, FaUsers } from 'react-icons/fa';
+import { FaTimes, FaUser, FaLock, FaEye, FaEyeSlash, FaEnvelope, FaPhone, FaMapMarkerAlt, FaIdCard, FaUsers, FaUserShield, FaCog } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,8 +47,39 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
     setError('');
 
     try {
-      if (isLogin) {
-        // Login API call
+      if (isAdminLogin) {
+        // Admin login API call
+        const response = await fetch('http://localhost:5000/api/users/admin/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Store admin token and data
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('admin', JSON.stringify(data.admin));
+          
+          // Notify parent component
+          if (onLoginSuccess) {
+            onLoginSuccess(data.admin, data.token, 'admin');
+          }
+          
+          // Redirect to admin dashboard
+          navigate('/admin');
+          onClose();
+        } else {
+          setError(data.message || 'Admin login failed');
+        }
+      } else if (isLogin) {
+        // Regular user login API call
         const response = await fetch('http://localhost:5000/api/users/login', {
           method: 'POST',
           headers: {
@@ -68,10 +100,10 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
           
           // Notify parent component
           if (onLoginSuccess) {
-            onLoginSuccess(data.user, data.token);
+            onLoginSuccess(data.user, data.token, 'user');
           }
           
-          // Redirect to dashboard
+          // Redirect to user dashboard
           navigate('/dashboard');
           onClose();
         } else {
@@ -109,11 +141,12 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
           
           // Notify parent component
           if (onLoginSuccess) {
-            onLoginSuccess(data.user, data.token);
+            onLoginSuccess(data.user, data.token, 'user');
           }
           
           // Switch to login mode instead of closing
           setIsLogin(true);
+          setIsAdminLogin(false);
           setFormData({
             email: formData.email, // Keep the email for login
             password: '',
@@ -142,12 +175,30 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
+    setIsAdminLogin(false);
     setError('');
     setFormData({
-      // Login fields
       email: '',
       password: '',
-      // Registration fields
+      confirmPassword: '',
+      fullName: '',
+      phoneNumber: '',
+      location: '',
+      community: '',
+      role: '',
+      organization: '',
+      nationalId: '',
+      emergencyContact: '',
+      emergencyPhone: ''
+    });
+  };
+
+  const toggleAdminLogin = () => {
+    setIsAdminLogin(!isAdminLogin);
+    setError('');
+    setFormData({
+      email: '',
+      password: '',
       confirmPassword: '',
       fullName: '',
       phoneNumber: '',
@@ -182,7 +233,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
         borderRadius: '20px',
         padding: '40px',
         width: '100%',
-        maxWidth: isLogin ? '450px' : '600px',
+        maxWidth: isAdminLogin || isLogin ? '450px' : '600px',
         maxHeight: '90vh',
         overflowY: 'auto',
         position: 'relative',
@@ -208,24 +259,114 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{
-            fontSize: '28px',
-            fontWeight: 'bold',
-            color: '#0891b2',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
             marginBottom: '10px'
           }}>
-            {isLogin ? 'Welcome Back' : 'Join AquaSafi'}
-          </h2>
+            {isAdminLogin && <FaUserShield style={{ color: '#dc2626', fontSize: '24px' }} />}
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: 'bold',
+              color: isAdminLogin ? '#dc2626' : '#0891b2',
+              marginBottom: '10px'
+            }}>
+              {isAdminLogin 
+                ? 'Admin Access' 
+                : isLogin 
+                  ? 'Welcome Back' 
+                  : 'Join AquaSafi'
+              }
+            </h2>
+          </div>
           <p style={{
             color: '#6b7280',
             fontSize: '16px'
           }}>
-            {isLogin 
-              ? 'Sign in to access your water management dashboard' 
-              : 'Create your account to start monitoring water resources'
+            {isAdminLogin 
+              ? 'Sign in to access the administration dashboard' 
+              : isLogin 
+                ? 'Sign in to access your water management dashboard' 
+                : 'Create your account to start monitoring water resources'
             }
           </p>
         </div>
+
+        {/* Admin/User Switch (Only for login mode) */}
+        {isLogin && !isAdminLogin && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '20px'
+          }}>
+            <button
+              onClick={toggleAdminLogin}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'none',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                color: '#6b7280',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = '#f9fafb';
+                e.target.style.borderColor = '#9ca3af';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.borderColor = '#d1d5db';
+              }}
+            >
+              <FaUserShield />
+              Admin Login
+            </button>
+          </div>
+        )}
+
+        {/* Back to User Login (Admin mode) */}
+        {isAdminLogin && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '20px'
+          }}>
+            <button
+              onClick={toggleAdminLogin}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'none',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                color: '#6b7280',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = '#f9fafb';
+                e.target.style.borderColor = '#9ca3af';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.borderColor = '#d1d5db';
+              }}
+            >
+              <FaUser />
+              Back to User Login
+            </button>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -245,8 +386,8 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          {/* Registration Fields */}
-          {!isLogin && (
+          {/* Registration Fields - Only show for user registration */}
+          {!isLogin && !isAdminLogin && (
             <>
               {/* Personal Information Section */}
               <div style={{ marginBottom: '25px' }}>
@@ -604,7 +745,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Enter your email"
+                placeholder={isAdminLogin ? "Enter admin email" : "Enter your email"}
                 required
                 disabled={isLoading}
                 style={{
@@ -618,7 +759,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
                   boxSizing: 'border-box',
                   backgroundColor: isLoading ? '#f9fafb' : 'white'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#0891b2'}
+                onFocus={(e) => e.target.style.borderColor = isAdminLogin ? '#dc2626' : '#0891b2'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               />
             </div>
@@ -648,7 +789,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Enter your password"
+                placeholder={isAdminLogin ? "Enter admin password" : "Enter your password"}
                 required
                 disabled={isLoading}
                 style={{
@@ -662,7 +803,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
                   boxSizing: 'border-box',
                   backgroundColor: isLoading ? '#f9fafb' : 'white'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#0891b2'}
+                onFocus={(e) => e.target.style.borderColor = isAdminLogin ? '#dc2626' : '#0891b2'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               />
               <button
@@ -687,7 +828,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
           </div>
 
           {/* Confirm Password (Registration only) */}
-          {!isLogin && (
+          {!isLogin && !isAdminLogin && (
             <div style={{ marginBottom: '20px' }}>
               <label style={{
                 display: 'block',
@@ -733,7 +874,7 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
           )}
 
           {/* Forgot Password (Login only) */}
-          {isLogin && (
+          {isLogin && !isAdminLogin && (
             <div style={{ textAlign: 'right', marginBottom: '25px' }}>
               <button
                 type="button"
@@ -757,7 +898,11 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
             disabled={isLoading}
             style={{
               width: '100%',
-              backgroundColor: isLoading ? '#9ca3af' : '#0891b2',
+              backgroundColor: isLoading 
+                ? '#9ca3af' 
+                : isAdminLogin 
+                  ? '#dc2626' 
+                  : '#0891b2',
               color: 'white',
               padding: '14px',
               border: 'none',
@@ -769,38 +914,68 @@ const CleanLoginPopup = ({ isOpen, onClose, initialMode = 'login', onLoginSucces
               marginBottom: '20px'
             }}
             onMouseOver={(e) => {
-              if (!isLoading) e.target.style.backgroundColor = '#0e7490';
+              if (!isLoading) {
+                e.target.style.backgroundColor = isAdminLogin ? '#b91c1c' : '#0e7490';
+              }
             }}
             onMouseOut={(e) => {
-              if (!isLoading) e.target.style.backgroundColor = '#0891b2';
+              if (!isLoading) {
+                e.target.style.backgroundColor = isAdminLogin ? '#dc2626' : '#0891b2';
+              }
             }}
           >
-            {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+            {isLoading 
+              ? 'Processing...' 
+              : isAdminLogin 
+                ? 'Admin Sign In' 
+                : isLogin 
+                  ? 'Sign In' 
+                  : 'Create Account'
+            }
           </button>
 
-          {/* Toggle Mode */}
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
-                type="button"
-                onClick={toggleMode}
-                disabled={isLoading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#0891b2',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
-            </p>
-          </div>
+          {/* Toggle Mode (Only show for user login/register) */}
+          {!isAdminLogin && (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  disabled={isLoading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#0891b2',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  {isLogin ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+            </div>
+          )}
         </form>
+
+        {/* Admin Demo Credentials */}
+        {isAdminLogin && (
+          <div style={{
+            marginTop: '20px',
+            padding: '15px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#64748b'
+          }}>
+            <strong>Demo Admin Credentials:</strong><br />
+            Email: admin@watermanagement.com<br />
+            Password: admin123
+          </div>
+        )}
       </div>
     </div>
   );
